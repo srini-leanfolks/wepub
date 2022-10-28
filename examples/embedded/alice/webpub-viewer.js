@@ -33,6 +33,16 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 define("Annotator", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -2504,6 +2514,200 @@ define("IFrameNavigator", ["require", "exports", "Cacher", "Manifest", "EventHan
         return IFrameNavigator;
     }());
     exports.default = IFrameNavigator;
+});
+// Heavily inspired by https://github.com/GoogleChromeLabs/page-lifecycle
+define("Lifecycle", ["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    // Note: The module currently is using Event and Event Target shims by default, and doesn’t check if constructable events are supported
+    var EventShim = /** @class */ (function () {
+        function EventShim(type) {
+            this.type = type;
+        }
+        return EventShim;
+    }());
+    var EventTargetShim = /** @class */ (function () {
+        function EventTargetShim() {
+            this._registry = {};
+        }
+        EventTargetShim.prototype.addEventListener = function (type, listener) {
+            this.getRegistry(type).push(listener);
+        };
+        EventTargetShim.prototype.removeEventListener = function (type, listener) {
+            var typeRegistry = this.getRegistry(type);
+            var handlerIndex = typeRegistry.indexOf(listener);
+            if (handlerIndex > -1) {
+                typeRegistry.splice(handlerIndex, 1);
+            }
+        };
+        EventTargetShim.prototype.dispatchEvent = function (evt) {
+            evt.target = this;
+            Object.freeze(evt);
+            this.getRegistry(evt.type).forEach(function (listener) { return listener(evt); });
+            return true;
+        };
+        EventTargetShim.prototype.getRegistry = function (type) {
+            return this._registry[type] = (this._registry[type] || []);
+        };
+        return EventTargetShim;
+    }());
+    var StateChangeEvent = /** @class */ (function (_super) {
+        __extends(StateChangeEvent, _super);
+        function StateChangeEvent(type, initDict) {
+            var _this = _super.call(this, type) || this;
+            _this.newState = initDict.newState;
+            _this.oldState = initDict.oldState;
+            _this.originalEvent = initDict.originalEvent;
+            return _this;
+        }
+        return StateChangeEvent;
+    }(EventShim));
+    exports.StateChangeEvent = StateChangeEvent;
+    var SUPPORTS_PAGE_TRANSITION_EVENTS = "onpageshow" in self;
+    var IS_SAFARI = (typeof window.safari === "object" && window.safari.pushNotification);
+    var toIndexedObject = function (arr) { return arr.reduce(function (acc, val, idx) {
+        acc[val] = idx;
+        return acc;
+    }, {}); };
+    var Lifecycle = /** @class */ (function (_super) {
+        __extends(Lifecycle, _super);
+        function Lifecycle() {
+            var _this = _super.call(this) || this;
+            _this.getLegalStateTransitionPath = function (oldState, newState) {
+                for (var order = void 0, i = 0; order = Lifecycle.LEGAL_STATE_TRANSITIONS[i]; ++i) {
+                    var oldIndex = order[oldState];
+                    var newIndex = order[newState];
+                    if (oldIndex >= 0 &&
+                        newIndex >= 0 &&
+                        newIndex > oldIndex) {
+                        return Object.keys(order).slice(oldIndex, newIndex + 1);
+                    }
+                }
+                return [];
+            };
+            // Note: Model was simplified due to the lack of "passive" support
+            _this.getCurrentState = function () {
+                if (document.visibilityState === Lifecycle.HIDDEN) {
+                    return Lifecycle.HIDDEN;
+                }
+                return Lifecycle.ACTIVE;
+            };
+            _this._state = _this.getCurrentState();
+            _this.handleEvents = _this.handleEvents.bind(_this);
+            Lifecycle.EVENTS.forEach(function (evt) { return addEventListener(evt, _this.handleEvents, true); });
+            if (IS_SAFARI) {
+                addEventListener("beforeunload", function (evt) {
+                    _this._safariBeforeUnloadTimeout = setTimeout(function () {
+                        if (!(evt.defaultPrevented || !evt.returnValue)) {
+                            _this.dispatchChangesIfNeeded(evt, Lifecycle.HIDDEN);
+                        }
+                    }, 0);
+                });
+            }
+            return _this;
+        }
+        Object.defineProperty(Lifecycle.prototype, "state", {
+            get: function () {
+                return this._state;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Lifecycle.prototype, "pageWasDiscarded", {
+            get: function () {
+                return document.wasDiscarded || false;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Lifecycle.prototype.dispatchChangesIfNeeded = function (originalEvent, newState) {
+            if (newState !== this._state) {
+                var oldState = this._state;
+                var path = this.getLegalStateTransitionPath(oldState, newState);
+                for (var i = 0; i < path.length - 1; ++i) {
+                    var oldState_1 = path[i];
+                    var newState_1 = path[i + 1];
+                    this._state = newState_1;
+                    this.dispatchEvent(new StateChangeEvent("statechange", {
+                        oldState: oldState_1,
+                        newState: newState_1,
+                        originalEvent: originalEvent,
+                    }));
+                }
+            }
+        };
+        Lifecycle.prototype.handleEvents = function (evt) {
+            if (IS_SAFARI) {
+                clearTimeout(this._safariBeforeUnloadTimeout);
+            }
+            // Note: model was simplified due to the lack of "passive" support
+            switch (evt.type) {
+                case "pageshow":
+                case "resume":
+                    this.dispatchChangesIfNeeded(evt, this.getCurrentState());
+                    break;
+                case "focus":
+                    if (this._state !== Lifecycle.ACTIVE) {
+                        this.dispatchChangesIfNeeded(evt, Lifecycle.ACTIVE);
+                    }
+                    break;
+                case "blur":
+                    // The `blur` event can fire while the page is being unloaded, so we
+                    // only need to update the state if the current state is "active".
+                    if (this._state === Lifecycle.ACTIVE) {
+                        this.dispatchChangesIfNeeded(evt, this.getCurrentState());
+                    }
+                    break;
+                case "pagehide":
+                case "unload":
+                    this.dispatchChangesIfNeeded(evt, evt.persisted ? Lifecycle.FROZEN : Lifecycle.TERMINATED);
+                    break;
+                case "visibilitychange":
+                    // The document's `visibilityState` will change to hidden  as the page
+                    // is being unloaded, but in such cases the lifecycle state shouldn't
+                    // change.
+                    if (this._state !== Lifecycle.FROZEN &&
+                        this._state !== Lifecycle.TERMINATED) {
+                        this.dispatchChangesIfNeeded(evt, this.getCurrentState());
+                    }
+                    break;
+                case "freeze":
+                    this.dispatchChangesIfNeeded(evt, Lifecycle.FROZEN);
+                    break;
+            }
+        };
+        Lifecycle.ACTIVE = "active";
+        //  private static readonly PASSIVE = "passive";
+        Lifecycle.HIDDEN = "hidden";
+        Lifecycle.FROZEN = "frozen";
+        Lifecycle.TERMINATED = "terminated";
+        // Note: Passive is missing in the transitions below
+        Lifecycle.LEGAL_STATE_TRANSITIONS = [
+            // The normal unload process (bfcache process is addressed above).
+            [Lifecycle.ACTIVE, Lifecycle.HIDDEN, Lifecycle.TERMINATED],
+            // An active page transitioning to frozen,
+            // or an unloading page going into the bfcache.
+            [Lifecycle.ACTIVE, Lifecycle.HIDDEN, Lifecycle.FROZEN],
+            // A hidden page transitioning back to active.
+            [Lifecycle.HIDDEN, Lifecycle.ACTIVE],
+            // A frozen page being resumed
+            [Lifecycle.FROZEN, Lifecycle.HIDDEN],
+            // A frozen (bfcached) page navigated back to
+            // Note: [FROZEN, HIDDEN] can happen here, but it's already covered above.
+            [Lifecycle.FROZEN, Lifecycle.ACTIVE]
+        ].map(toIndexedObject);
+        Lifecycle.EVENTS = [
+            "focus",
+            "blur",
+            "visibilitychange",
+            "freeze",
+            "resume",
+            "pageshow",
+            SUPPORTS_PAGE_TRANSITION_EVENTS ? "pagehide" : "unload",
+        ];
+        return Lifecycle;
+    }(EventTargetShim));
+    exports.Lifecycle = Lifecycle;
 });
 define("LocalAnnotator", ["require", "exports"], function (require, exports) {
     "use strict";
