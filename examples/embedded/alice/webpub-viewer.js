@@ -174,36 +174,42 @@ define("BookSettings", ["require", "exports", "HTMLUtilities", "IconLib"], funct
     var optionTemplate = function (liClassName, buttonClassName, label, role, svgIcon, buttonId) { return "\n    <li class='" + liClassName + "'><button id='" + buttonId + "' class='" + buttonClassName + "' role='" + role + "' tabindex=-1>" + label + svgIcon + "</button></li>\n"; };
     var offlineTemplate = "\n    <li>\n        <div class='offline-status'></div>\n    </li>\n";
     var BookSettings = /** @class */ (function () {
-        function BookSettings(store, bookFonts, fontSizes, bookThemes, bookViews) {
+        function BookSettings(store, bookFonts, fontSizes, letterSpacings, bookThemes, bookViews) {
             this.fontChangeCallback = function () { };
             this.fontSizeChangeCallback = function () { };
+            this.letterSpacingChangeCallback = function () { };
             this.themeChangeCallback = function () { };
             this.viewChangeCallback = function () { };
             this.store = store;
             this.bookFonts = bookFonts;
             this.fontSizes = fontSizes;
+            this.letterSpacings = letterSpacings;
             this.bookThemes = bookThemes;
             this.bookViews = bookViews;
         }
         BookSettings.create = function (config) {
             return __awaiter(this, void 0, void 0, function () {
-                var fontSizes, settings;
+                var fontSizes, letterSpacing, settings;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
                             fontSizes = config.fontSizesInPixels.map(function (fontSize) { return fontSize + "px"; });
-                            settings = new this(config.store, config.bookFonts, fontSizes, config.bookThemes, config.bookViews);
+                            letterSpacing = config.letterSpacingInPixels.map(function (spacing) { return spacing + "px"; });
+                            settings = new this(config.store, config.bookFonts, fontSizes, letterSpacing, config.bookThemes, config.bookViews);
                             return [4 /*yield*/, settings.initializeSelections(config.defaultFontSizeInPixels ? config.defaultFontSizeInPixels + "px" : undefined)];
                         case 1:
+                            _a.sent();
+                            return [4 /*yield*/, settings.initializeSelections(config.defaultLetterSpacingInPixels ? config.defaultLetterSpacingInPixels + "px" : undefined)];
+                        case 2:
                             _a.sent();
                             return [2 /*return*/, settings];
                     }
                 });
             });
         };
-        BookSettings.prototype.initializeSelections = function (defaultFontSize) {
+        BookSettings.prototype.initializeSelections = function (defaultFontSize, defaultLetterSpacing) {
             return __awaiter(this, void 0, void 0, function () {
-                var selectedFont, selectedFontName, _i, _a, bookFont, selectedFontSize, selectedFontSizeIsAvailable, averageFontSizeIndex, selectedTheme, selectedThemeName, _b, _c, bookTheme, selectedView, selectedViewName, _d, _e, bookView;
+                var selectedFont, selectedFontName, _i, _a, bookFont, selectedFontSize, selectedFontSizeIsAvailable, averageFontSizeIndex, selectedLetterSpacing, selectedLetterSpacingIsAvailable, averageLetterSpacingIndex, selectedTheme, selectedThemeName, _b, _c, bookTheme, selectedView, selectedViewName, _d, _e, bookView;
                 return __generator(this, function (_f) {
                     switch (_f.label) {
                         case 0:
@@ -242,10 +248,28 @@ define("BookSettings", ["require", "exports", "HTMLUtilities", "IconLib"], funct
                             this.selectedFontSize = selectedFontSize;
                             _f.label = 4;
                         case 4:
-                            if (!(this.bookThemes.length >= 1)) return [3 /*break*/, 6];
+                            if (!(this.letterSpacings.length >= 1)) return [3 /*break*/, 6];
+                            return [4 /*yield*/, this.store.get(BookSettings.SELECTED_LETTER_SPACING_KEY)];
+                        case 5:
+                            selectedLetterSpacing = _f.sent();
+                            selectedLetterSpacingIsAvailable = (selectedLetterSpacing && this.letterSpacings.indexOf(selectedLetterSpacing) !== -1);
+                            // If not, or the user selected a size that's no longer an option, is there a default font size?
+                            if ((!selectedLetterSpacing || !selectedLetterSpacingIsAvailable) && defaultLetterSpacing) {
+                                selectedLetterSpacing = defaultLetterSpacing;
+                                selectedLetterSpacingIsAvailable = (selectedLetterSpacing && this.letterSpacings.indexOf(selectedLetterSpacing) !== -1);
+                            }
+                            // If there's no selection and no default, pick a font size in the middle of the options.
+                            if (!selectedLetterSpacing || !selectedLetterSpacingIsAvailable) {
+                                averageLetterSpacingIndex = Math.floor(this.letterSpacings.length / 2);
+                                selectedLetterSpacing = this.letterSpacings[averageLetterSpacingIndex];
+                            }
+                            this.selectedLetterSpacing = selectedLetterSpacing;
+                            _f.label = 6;
+                        case 6:
+                            if (!(this.bookThemes.length >= 1)) return [3 /*break*/, 8];
                             selectedTheme = this.bookThemes[0];
                             return [4 /*yield*/, this.store.get(BookSettings.SELECTED_THEME_KEY)];
-                        case 5:
+                        case 7:
                             selectedThemeName = _f.sent();
                             if (selectedThemeName) {
                                 for (_b = 0, _c = this.bookThemes; _b < _c.length; _b++) {
@@ -257,12 +281,12 @@ define("BookSettings", ["require", "exports", "HTMLUtilities", "IconLib"], funct
                                 }
                             }
                             this.selectedTheme = selectedTheme;
-                            _f.label = 6;
-                        case 6:
-                            if (!(this.bookViews.length >= 1)) return [3 /*break*/, 8];
+                            _f.label = 8;
+                        case 8:
+                            if (!(this.bookViews.length >= 1)) return [3 /*break*/, 10];
                             selectedView = this.bookViews[0];
                             return [4 /*yield*/, this.store.get(BookSettings.SELECTED_VIEW_KEY)];
-                        case 7:
+                        case 9:
                             selectedViewName = _f.sent();
                             if (selectedViewName) {
                                 for (_d = 0, _e = this.bookViews; _d < _e.length; _d++) {
@@ -274,8 +298,8 @@ define("BookSettings", ["require", "exports", "HTMLUtilities", "IconLib"], funct
                                 }
                             }
                             this.selectedView = selectedView;
-                            _f.label = 8;
-                        case 8: return [2 /*return*/];
+                            _f.label = 10;
+                        case 10: return [2 /*return*/];
                     }
                 });
             });
@@ -289,8 +313,12 @@ define("BookSettings", ["require", "exports", "HTMLUtilities", "IconLib"], funct
                 sections.push(sectionTemplate(fontOptions.join("")));
             }
             if (this.fontSizes.length > 1) {
-                var fontSizeOptions = optionTemplate("font-setting", "decrease", "A-", "menuitem", "", "decrease-font") + optionTemplate("font-setting", "increase", "A+", "menuitem", "", "increase-font");
+                var fontSizeOptions = optionTemplate("font-setting", "decrease", "SIZE-", "menuitem", "", "decrease-font") + optionTemplate("font-setting", "increase", "SIZE+", "menuitem", "", "increase-font");
                 sections.push(sectionTemplate(fontSizeOptions));
+            }
+            if (this.letterSpacings.length > 1) {
+                var letterSpacingOptions = optionTemplate("font-setting-spacing", "decrease-spacing", "SPACE-", "menuitem", "", "decrease-spacing") + optionTemplate("font-setting-spacing", "increase-spacing", "SPACE+", "menuitem", "", "increase-spacing");
+                sections.push(sectionTemplate(letterSpacingOptions));
             }
             if (this.bookThemes.length > 1) {
                 var themeOptions = this.bookThemes.map(function (bookTheme) {
@@ -322,18 +350,26 @@ define("BookSettings", ["require", "exports", "HTMLUtilities", "IconLib"], funct
                 }
                 this.updateFontSizeButtons();
             }
+            this.letterSpacingButtons = {};
+            if (this.letterSpacings.length > 1) {
+                for (var _d = 0, _e = ["decrease-spacing", "increase-spacing"]; _d < _e.length; _d++) {
+                    var letterSpacingName = _e[_d];
+                    this.letterSpacingButtons[letterSpacingName] = HTMLUtilities.findRequiredElement(element, "button[class=" + letterSpacingName + "]");
+                }
+                this.updateLetterSpacingButtons();
+            }
             this.themeButtons = {};
             if (this.bookThemes.length > 1) {
-                for (var _d = 0, _e = this.bookThemes; _d < _e.length; _d++) {
-                    var bookTheme = _e[_d];
+                for (var _f = 0, _g = this.bookThemes; _f < _g.length; _f++) {
+                    var bookTheme = _g[_f];
                     this.themeButtons[bookTheme.name] = HTMLUtilities.findRequiredElement(element, "button[class=" + bookTheme.name + "]");
                 }
                 this.updateThemeButtons();
             }
             this.viewButtons = {};
             if (this.bookViews.length > 1) {
-                for (var _f = 0, _g = this.bookViews; _f < _g.length; _f++) {
-                    var bookView = _g[_f];
+                for (var _h = 0, _j = this.bookViews; _h < _j.length; _h++) {
+                    var bookView = _j[_h];
                     this.viewButtons[bookView.name] = HTMLUtilities.findRequiredElement(element, "button[class=" + bookView.name + "]");
                 }
                 this.updateViewButtons();
@@ -350,6 +386,9 @@ define("BookSettings", ["require", "exports", "HTMLUtilities", "IconLib"], funct
         };
         BookSettings.prototype.onFontSizeChange = function (callback) {
             this.fontSizeChangeCallback = callback;
+        };
+        BookSettings.prototype.onLetterSpacingChange = function (callback) {
+            this.letterSpacingChangeCallback = callback;
         };
         BookSettings.prototype.onThemeChange = function (callback) {
             this.themeChangeCallback = callback;
@@ -398,6 +437,30 @@ define("BookSettings", ["require", "exports", "HTMLUtilities", "IconLib"], funct
                         _this.fontSizeChangeCallback();
                         _this.updateFontSizeButtons();
                         _this.storeSelectedFontSize(newFontSize);
+                    }
+                    event.preventDefault();
+                });
+            }
+            if (this.letterSpacings.length > 1) {
+                this.letterSpacingButtons["decrease-spacing"].addEventListener("click", function (event) {
+                    var currentLetterSpacingIndex = _this.letterSpacings.indexOf(_this.selectedLetterSpacing);
+                    if (currentLetterSpacingIndex > 0) {
+                        var newLetterSpacing = _this.letterSpacings[currentLetterSpacingIndex - 1];
+                        _this.selectedLetterSpacing = newLetterSpacing;
+                        _this.letterSpacingChangeCallback();
+                        _this.updateLetterSpacingButtons();
+                        _this.storeSelectedLetterSpacing(newLetterSpacing);
+                    }
+                    event.preventDefault();
+                });
+                this.letterSpacingButtons["increase-spacing"].addEventListener("click", function (event) {
+                    var currentLetterSpacingIndex = _this.letterSpacings.indexOf(_this.selectedLetterSpacing);
+                    if (currentLetterSpacingIndex < _this.letterSpacings.length - 1) {
+                        var newLetterSpacing = _this.letterSpacings[currentLetterSpacingIndex + 1];
+                        _this.selectedLetterSpacing = newLetterSpacing;
+                        _this.letterSpacingChangeCallback();
+                        _this.updateLetterSpacingButtons();
+                        _this.storeSelectedLetterSpacing(newLetterSpacing);
                     }
                     event.preventDefault();
                 });
@@ -470,6 +533,21 @@ define("BookSettings", ["require", "exports", "HTMLUtilities", "IconLib"], funct
                 this.fontSizeButtons["increase"].className = "increase";
             }
         };
+        BookSettings.prototype.updateLetterSpacingButtons = function () {
+            var currentLetterSpacingIndex = this.letterSpacings.indexOf(this.selectedLetterSpacing);
+            if (currentLetterSpacingIndex === 0) {
+                this.letterSpacingButtons["decrease-spacing"].className = "decrease-spacing disabled";
+            }
+            else {
+                this.letterSpacingButtons["decrease-spacing"].className = "decrease-spacing";
+            }
+            if (currentLetterSpacingIndex === this.letterSpacings.length - 1) {
+                this.letterSpacingButtons["increase-spacing"].className = "increase-spacing disabled";
+            }
+            else {
+                this.letterSpacingButtons["increase-spacing"].className = "increase-spacing";
+            }
+        };
         BookSettings.prototype.updateThemeButtons = function () {
             for (var _i = 0, _a = this.bookThemes; _i < _a.length; _i++) {
                 var theme = _a[_i];
@@ -502,6 +580,9 @@ define("BookSettings", ["require", "exports", "HTMLUtilities", "IconLib"], funct
         BookSettings.prototype.getSelectedFontSize = function () {
             return this.selectedFontSize;
         };
+        BookSettings.prototype.getSelectedLetterSpacing = function () {
+            return this.selectedLetterSpacing;
+        };
         BookSettings.prototype.getSelectedTheme = function () {
             return this.selectedTheme;
         };
@@ -525,6 +606,13 @@ define("BookSettings", ["require", "exports", "HTMLUtilities", "IconLib"], funct
                 });
             });
         };
+        BookSettings.prototype.storeSelectedLetterSpacing = function (letterSpacing) {
+            return __awaiter(this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    return [2 /*return*/, this.store.set(BookSettings.SELECTED_LETTER_SPACING_KEY, letterSpacing)];
+                });
+            });
+        };
         BookSettings.prototype.storeSelectedTheme = function (theme) {
             return __awaiter(this, void 0, void 0, function () {
                 return __generator(this, function (_a) {
@@ -541,6 +629,7 @@ define("BookSettings", ["require", "exports", "HTMLUtilities", "IconLib"], funct
         };
         BookSettings.SELECTED_FONT_KEY = "settings-selected-font";
         BookSettings.SELECTED_FONT_SIZE_KEY = "settings-selected-font-size";
+        BookSettings.SELECTED_LETTER_SPACING_KEY = "settings-selected-letter-spacing";
         BookSettings.SELECTED_THEME_KEY = "settings-selected-theme";
         BookSettings.SELECTED_VIEW_KEY = "settings-selected-view";
         return BookSettings;
@@ -1620,6 +1709,7 @@ define("IFrameNavigator", ["require", "exports", "Cacher", "Manifest", "EventHan
                             }
                             this.settings.renderControls(this.settingsView);
                             this.settings.onFontChange(this.updateFont.bind(this));
+                            this.settings.onLetterSpacingChange(this.updateLetterSpacing.bind(this));
                             this.settings.onFontSizeChange(this.updateFontSize.bind(this));
                             this.settings.onViewChange(this.updateBookView.bind(this));
                             settingsButtons = this.settingsView.querySelectorAll("button");
@@ -1721,6 +1811,9 @@ define("IFrameNavigator", ["require", "exports", "Cacher", "Manifest", "EventHan
             this.handleResize();
         };
         IFrameNavigator.prototype.updateFontSize = function () {
+            this.handleResize();
+        };
+        IFrameNavigator.prototype.updateLetterSpacing = function () {
             this.handleResize();
         };
         IFrameNavigator.prototype.updateBookView = function () {
@@ -1959,6 +2052,7 @@ define("IFrameNavigator", ["require", "exports", "Cacher", "Manifest", "EventHan
                             }
                             this.updateFont();
                             this.updateFontSize();
+                            this.updateLetterSpacing();
                             this.updateBookView();
                             this.settings.getSelectedFont().start();
                             this.settings.getSelectedTheme().start();
@@ -2305,13 +2399,15 @@ define("IFrameNavigator", ["require", "exports", "Cacher", "Manifest", "EventHan
             var selectedView = this.settings.getSelectedView();
             var oldPosition = selectedView.getCurrentPosition();
             var fontSize = this.settings.getSelectedFontSize();
+            var letterSpacing = this.settings.getSelectedLetterSpacing();
             var body = HTMLUtilities.findRequiredIframeElement(this.iframe.contentDocument, "body");
             body.style.fontSize = fontSize;
+            body.style.letterSpacing = letterSpacing;
             body.style.lineHeight = "1.5";
             // Disable text selection as we can’t handle this correctly anyway
             body.style.webkitUserSelect = "none";
             body.style.MozUserSelect = "none";
-            body.style.msUserSelect = "none";
+            // body.style.msUserSelect = "none";
             body.style.userSelect = "none";
             var fontSizeNumber = parseInt(fontSize.slice(0, -2));
             var sideMargin = fontSizeNumber * 2;
@@ -3018,7 +3114,7 @@ define("app", ["require", "exports", "LocalStorageStore", "ServiceWorkerCacher",
     var _this = this;
     Object.defineProperty(exports, "__esModule", { value: true });
     var app = function (element, manifestUrl) { return __awaiter(_this, void 0, void 0, function () {
-        var bookStore, cacher, annotator, publisher, serif, sans, fontSizes, day, sepia, night, paginator, scroller, settingsStore, settings;
+        var bookStore, cacher, annotator, publisher, serif, sans, fontSizes, letterSpacings, day, sepia, night, paginator, scroller, settingsStore, settings;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -3029,6 +3125,7 @@ define("app", ["require", "exports", "LocalStorageStore", "ServiceWorkerCacher",
                     serif = new SerifFont_1.default();
                     sans = new SansFont_1.default();
                     fontSizes = [12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32];
+                    letterSpacings = [0, 1, 2, 3, 4];
                     day = new DayTheme_1.default();
                     sepia = new SepiaTheme_1.default();
                     night = new NightTheme_1.default();
@@ -3039,7 +3136,9 @@ define("app", ["require", "exports", "LocalStorageStore", "ServiceWorkerCacher",
                             store: settingsStore,
                             bookFonts: [publisher, serif, sans],
                             fontSizesInPixels: fontSizes,
+                            letterSpacingInPixels: letterSpacings,
                             defaultFontSizeInPixels: 20,
+                            defaultLetterSpacingInPixels: 0,
                             bookThemes: [day, sepia, night],
                             bookViews: [paginator, scroller]
                         })];
