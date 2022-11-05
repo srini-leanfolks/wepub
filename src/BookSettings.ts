@@ -37,8 +37,14 @@ export interface BookSettingsConfig {
     /** Array of font sizes in pixels sorted from smallest to largest. */
     fontSizesInPixels: number[],
 
+    /** Array of letter spacing in pixels sorted from smallest to largest. */
+    letterSpacingInPixels: number[],
+
     /** Initial font size to use until the user makes a selection. */
     defaultFontSizeInPixels?: number,
+
+    /** Initial letter spacing to use until the user makes a selection. */
+    defaultLetterSpacingInPixels?: number,
 
     /** Array of BookThemes */
     bookThemes: BookTheme[],
@@ -52,7 +58,9 @@ export default class BookSettings {
     private readonly bookFonts: BookFont[];
     private fontButtons: { [key: string]: HTMLButtonElement };
     private readonly fontSizes: string[];
+    private readonly letterSpacings: string[];
     private fontSizeButtons: { [key: string]: HTMLButtonElement };
+    private letterSpacingButtons: { [key: string]: HTMLButtonElement };
     private readonly bookThemes: BookTheme[];
     private themeButtons: { [key: string]: HTMLButtonElement };
     private readonly bookViews: BookView[];
@@ -62,35 +70,41 @@ export default class BookSettings {
 
     private fontChangeCallback: () => void = () => {};
     private fontSizeChangeCallback: () => void = () => {};
+    private letterSpacingChangeCallback: () => void = () => {};
     private themeChangeCallback: () => void = () => {};
     private viewChangeCallback: () => void = () => {};
 
     private selectedFont: BookFont;
     private selectedFontSize: string;
+    private selectedLetterSpacing: string;
     private selectedTheme: BookTheme;
     private selectedView: BookView;
 
     private static readonly SELECTED_FONT_KEY = "settings-selected-font";
     private static readonly SELECTED_FONT_SIZE_KEY = "settings-selected-font-size";
+    private static readonly SELECTED_LETTER_SPACING_KEY = "settings-selected-letter-spacing";
     private static readonly SELECTED_THEME_KEY = "settings-selected-theme";
     private static readonly SELECTED_VIEW_KEY = "settings-selected-view";
 
     public static async create(config: BookSettingsConfig) {
         const fontSizes = config.fontSizesInPixels.map(fontSize => fontSize + "px");
-        const settings = new this(config.store, config.bookFonts, fontSizes, config.bookThemes, config.bookViews);
+        const letterSpacing = config.letterSpacingInPixels.map(spacing => spacing + "px");
+        const settings = new this(config.store, config.bookFonts, fontSizes, letterSpacing, config.bookThemes, config.bookViews);
         await settings.initializeSelections(config.defaultFontSizeInPixels ? config.defaultFontSizeInPixels + "px" : undefined);
+        await settings.initializeSelections(config.defaultLetterSpacingInPixels ? config.defaultLetterSpacingInPixels + "px" : undefined);
         return settings;
     }
 
-    protected constructor(store: Store, bookFonts: BookFont[], fontSizes: string[], bookThemes: BookTheme[], bookViews: BookView[]) {
+    protected constructor(store: Store, bookFonts: BookFont[], fontSizes: string[], letterSpacings: string[], bookThemes: BookTheme[], bookViews: BookView[]) {
         this.store = store;
         this.bookFonts = bookFonts;
         this.fontSizes = fontSizes;
+        this.letterSpacings = letterSpacings;
         this.bookThemes = bookThemes;
         this.bookViews = bookViews;
     }
 
-    private async initializeSelections(defaultFontSize?: string): Promise<void> {
+    private async initializeSelections(defaultFontSize?: string, defaultLetterSpacing?: string): Promise<void> {
         if (this.bookFonts.length >= 1) {
             let selectedFont = this.bookFonts[0];
             const selectedFontName = await this.store.get(BookSettings.SELECTED_FONT_KEY);
@@ -121,6 +135,23 @@ export default class BookSettings {
             }
             this.selectedFontSize = selectedFontSize;
         }
+
+        if (this.letterSpacings.length >= 1) {
+          // First, check if the user has previously set a font size.
+          let selectedLetterSpacing = await this.store.get(BookSettings.SELECTED_LETTER_SPACING_KEY);
+          let selectedLetterSpacingIsAvailable = (selectedLetterSpacing && this.letterSpacings.indexOf(selectedLetterSpacing) !== -1);
+          // If not, or the user selected a size that's no longer an option, is there a default font size?
+          if ((!selectedLetterSpacing || !selectedLetterSpacingIsAvailable) && defaultLetterSpacing) {
+              selectedLetterSpacing = defaultLetterSpacing;
+              selectedLetterSpacingIsAvailable = (selectedLetterSpacing && this.letterSpacings.indexOf(selectedLetterSpacing) !== -1);
+          }
+          // If there's no selection and no default, pick a font size in the middle of the options.
+          if (!selectedLetterSpacing || !selectedLetterSpacingIsAvailable) {
+              const averageLetterSpacingIndex = Math.floor(this.letterSpacings.length / 2);
+              selectedLetterSpacing = this.letterSpacings[averageLetterSpacingIndex];
+          }
+          this.selectedLetterSpacing = selectedLetterSpacing;
+      }
 
         if (this.bookThemes.length >= 1) {
             let selectedTheme = this.bookThemes[0];
@@ -162,8 +193,13 @@ export default class BookSettings {
         }
 
         if (this.fontSizes.length > 1) {
-            const fontSizeOptions = optionTemplate("font-setting", "decrease", "A-", "menuitem", "", "decrease-font") + optionTemplate("font-setting", "increase", "A+", "menuitem", "", "increase-font");
+            const fontSizeOptions = optionTemplate("font-setting", "decrease", "SIZE-", "menuitem", "", "decrease-font") + optionTemplate("font-setting", "increase", "SIZE+", "menuitem", "", "increase-font");
             sections.push(sectionTemplate(fontSizeOptions));
+        }
+
+        if (this.letterSpacings.length > 1) {
+          const letterSpacingOptions = optionTemplate("font-setting-spacing", "decrease-spacing", "SPACE-", "menuitem", "", "decrease-spacing") + optionTemplate("font-setting-spacing", "increase-spacing", "SPACE+", "menuitem", "", "increase-spacing");
+          sections.push(sectionTemplate(letterSpacingOptions));
         }
 
         if (this.bookThemes.length > 1) {
@@ -197,6 +233,13 @@ export default class BookSettings {
             }
             this.updateFontSizeButtons();
         }
+        this.letterSpacingButtons = {};
+        if (this.letterSpacings.length > 1) {
+            for (const letterSpacingName of ["decrease-spacing", "increase-spacing"]) {
+                this.letterSpacingButtons[letterSpacingName] = HTMLUtilities.findRequiredElement(element, "button[class=" + letterSpacingName + "]") as HTMLButtonElement;
+            }
+            this.updateLetterSpacingButtons();
+        }
         this.themeButtons = {};
         if (this.bookThemes.length > 1) {
             for (const bookTheme of this.bookThemes) {
@@ -229,6 +272,10 @@ export default class BookSettings {
     public onFontSizeChange(callback: () => void) {
         this.fontSizeChangeCallback = callback;
     }
+
+    public onLetterSpacingChange(callback: () => void) {
+      this.letterSpacingChangeCallback = callback;
+  }
 
     public onThemeChange(callback: () => void) {
         this.themeChangeCallback = callback;
@@ -278,6 +325,32 @@ export default class BookSettings {
                 }
                 event.preventDefault();
             });
+        }
+
+        if (this.letterSpacings.length > 1) {
+          this.letterSpacingButtons["decrease-spacing"].addEventListener("click", (event: MouseEvent) => {
+              const currentLetterSpacingIndex = this.letterSpacings.indexOf(this.selectedLetterSpacing);
+              if (currentLetterSpacingIndex > 0) {
+                  const newLetterSpacing = this.letterSpacings[currentLetterSpacingIndex - 1];
+                  this.selectedLetterSpacing = newLetterSpacing;
+                  this.letterSpacingChangeCallback();
+                  this.updateLetterSpacingButtons();
+                  this.storeSelectedLetterSpacing(newLetterSpacing);
+              }
+              event.preventDefault();
+          });
+
+          this.letterSpacingButtons["increase-spacing"].addEventListener("click", (event: MouseEvent) => {
+              const currentLetterSpacingIndex = this.letterSpacings.indexOf(this.selectedLetterSpacing);
+              if (currentLetterSpacingIndex < this.letterSpacings.length - 1) {
+                  const newLetterSpacing = this.letterSpacings[currentLetterSpacingIndex + 1];
+                  this.selectedLetterSpacing = newLetterSpacing;
+                  this.letterSpacingChangeCallback();
+                  this.updateLetterSpacingButtons();
+                  this.storeSelectedLetterSpacing(newLetterSpacing);
+              }
+              event.preventDefault();
+          });
         }
 
         for (const theme of this.bookThemes) {
@@ -340,6 +413,22 @@ export default class BookSettings {
         }
     }
 
+    private updateLetterSpacingButtons(): void {
+      const currentLetterSpacingIndex = this.letterSpacings.indexOf(this.selectedLetterSpacing);
+
+      if (currentLetterSpacingIndex === 0) {
+          this.letterSpacingButtons["decrease-spacing"].className = "decrease-spacing disabled";
+      } else {
+          this.letterSpacingButtons["decrease-spacing"].className = "decrease-spacing";
+      }
+
+      if (currentLetterSpacingIndex === this.letterSpacings.length - 1) {
+          this.letterSpacingButtons["increase-spacing"].className = "increase-spacing disabled";
+      } else {
+          this.letterSpacingButtons["increase-spacing"].className = "increase-spacing";
+      }
+  }
+
     private updateThemeButtons(): void {
         for (const theme of this.bookThemes) {
             if (theme === this.selectedTheme) {
@@ -372,6 +461,10 @@ export default class BookSettings {
         return this.selectedFontSize;
     }
 
+    public getSelectedLetterSpacing(): string {
+      return this.selectedLetterSpacing;
+    }
+
     public getSelectedTheme(): BookTheme {
         return this.selectedTheme;
     }
@@ -391,6 +484,10 @@ export default class BookSettings {
     private async storeSelectedFontSize(fontSize: string): Promise<void> {
         return this.store.set(BookSettings.SELECTED_FONT_SIZE_KEY, fontSize);
     }
+
+    private async storeSelectedLetterSpacing(letterSpacing: string): Promise<void> {
+      return this.store.set(BookSettings.SELECTED_LETTER_SPACING_KEY, letterSpacing);
+  }
 
     private async storeSelectedTheme(theme: BookTheme): Promise<void> {
         return this.store.set(BookSettings.SELECTED_THEME_KEY, theme.name);

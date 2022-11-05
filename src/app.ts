@@ -20,6 +20,7 @@ const app = async (element: HTMLElement, manifestUrl: URL): Promise<IFrameNaviga
     const serif = new SerifFont();
     const sans = new SansFont();
     const fontSizes = [ 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32 ];
+    const letterSpacings = [ 0, 1, 2, 3, 4 ];
     const day = new DayTheme();
     const sepia = new SepiaTheme();
     const night = new NightTheme();
@@ -30,7 +31,9 @@ const app = async (element: HTMLElement, manifestUrl: URL): Promise<IFrameNaviga
         store: settingsStore,
         bookFonts: [publisher, serif, sans],
         fontSizesInPixels: fontSizes,
+        letterSpacingInPixels: letterSpacings,
         defaultFontSizeInPixels: 20,
+        defaultLetterSpacingInPixels: 0,
         bookThemes: [day, sepia, night],
         bookViews: [paginator, scroller]
     });

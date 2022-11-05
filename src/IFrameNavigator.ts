@@ -297,6 +297,7 @@ export default class IFrameNavigator implements Navigator {
             }
             this.settings.renderControls(this.settingsView);
             this.settings.onFontChange(this.updateFont.bind(this));
+            this.settings.onLetterSpacingChange(this.updateLetterSpacing.bind(this));
             this.settings.onFontSizeChange(this.updateFontSize.bind(this));
             this.settings.onViewChange(this.updateBookView.bind(this));
 
@@ -419,6 +420,10 @@ export default class IFrameNavigator implements Navigator {
 
     private updateFontSize(): void {
         this.handleResize();
+    }
+
+    private updateLetterSpacing(): void {
+      this.handleResize();
     }
 
     private updateBookView(): void {
@@ -643,6 +648,7 @@ export default class IFrameNavigator implements Navigator {
             }
             this.updateFont();
             this.updateFontSize();
+            this.updateLetterSpacing();
             this.updateBookView();
             this.settings.getSelectedFont().start();
             this.settings.getSelectedTheme().start();
@@ -1019,14 +1025,16 @@ export default class IFrameNavigator implements Navigator {
         const oldPosition = selectedView.getCurrentPosition();
 
         const fontSize = this.settings.getSelectedFontSize();
+        const letterSpacing = this.settings.getSelectedLetterSpacing();
         const body = HTMLUtilities.findRequiredIframeElement(this.iframe.contentDocument, "body") as HTMLBodyElement;
         body.style.fontSize = fontSize;
+        body.style.letterSpacing = letterSpacing;
         body.style.lineHeight = "1.5";
 
         // Disable text selection as we can’t handle this correctly anyway
         body.style.webkitUserSelect = "none";
         (body as any).style.MozUserSelect = "none";
-        body.style.msUserSelect = "none";
+        // body.style.msUserSelect = "none";
         body.style.userSelect = "none";
 
         const fontSizeNumber = parseInt(fontSize.slice(0, -2));

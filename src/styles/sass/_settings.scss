@@ -122,6 +122,27 @@
         border-right: 0;
       }
 
+      button.decrease-spacing {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+        border-left: 0;
+      }
+
+      button.increase-spacing {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+        border-left: 0;
+        border-right: 0;
+      }
+
+      button.decrease.disabled,
+      button.increase.disabled,
+      button.decrease-spacing.disabled,
+      button.increase-spacing.disabled {
+        background-color: lightgrey;
+        cursor: not-allowed;
+      }
+
       button.day-theme {
         background-color: $ui-white;
         border-top-right-radius: 0;
