@@ -1034,8 +1034,13 @@ export default class IFrameNavigator implements Navigator {
         // Disable text selection as we can’t handle this correctly anyway
         body.style.webkitUserSelect = "none";
         (body as any).style.MozUserSelect = "none";
-        // body.style.msUserSelect = "none";
+        (body as any).style.msUserSelect = "none";
         body.style.userSelect = "none";
+
+        const headingArray: NodeListOf<HTMLHeadingElement> = body.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        for (let i = 0; i < headingArray.length; i++) {
+          headingArray[i].style.letterSpacing = letterSpacing;
+        }
 
         const fontSizeNumber = parseInt(fontSize.slice(0, -2));
         let sideMargin = fontSizeNumber * 2;

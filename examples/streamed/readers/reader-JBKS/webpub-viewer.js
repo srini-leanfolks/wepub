@@ -209,7 +209,7 @@ define("BookSettings", ["require", "exports", "HTMLUtilities", "IconLib"], funct
         };
         BookSettings.prototype.initializeSelections = function (defaultFontSize, defaultLetterSpacing) {
             return __awaiter(this, void 0, void 0, function () {
-                var selectedFont, selectedFontName, _i, _a, bookFont, selectedFontSize, selectedFontSizeIsAvailable, averageFontSizeIndex, selectedLetterSpacing, selectedLetterSpacingIsAvailable, averageLetterSpacingIndex, selectedTheme, selectedThemeName, _b, _c, bookTheme, selectedView, selectedViewName, _d, _e, bookView;
+                var selectedFont, selectedFontName, _i, _a, bookFont, selectedFontSize, selectedFontSizeIsAvailable, averageFontSizeIndex, selectedLetterSpacing, selectedLetterSpacingIsAvailable, selectedTheme, selectedThemeName, _b, _c, bookTheme, selectedView, selectedViewName, _d, _e, bookView;
                 return __generator(this, function (_f) {
                     switch (_f.label) {
                         case 0:
@@ -253,15 +253,14 @@ define("BookSettings", ["require", "exports", "HTMLUtilities", "IconLib"], funct
                         case 5:
                             selectedLetterSpacing = _f.sent();
                             selectedLetterSpacingIsAvailable = (selectedLetterSpacing && this.letterSpacings.indexOf(selectedLetterSpacing) !== -1);
-                            // If not, or the user selected a size that's no longer an option, is there a default font size?
+                            // If not, or the user selected a size that's no longer an option, is there a default letter spacing?
                             if ((!selectedLetterSpacing || !selectedLetterSpacingIsAvailable) && defaultLetterSpacing) {
                                 selectedLetterSpacing = defaultLetterSpacing;
                                 selectedLetterSpacingIsAvailable = (selectedLetterSpacing && this.letterSpacings.indexOf(selectedLetterSpacing) !== -1);
                             }
-                            // If there's no selection and no default, pick a font size in the middle of the options.
+                            // If there's no selection and no default, pick a letter spacing in the middle of the options.
                             if (!selectedLetterSpacing || !selectedLetterSpacingIsAvailable) {
-                                averageLetterSpacingIndex = Math.floor(this.letterSpacings.length / 2);
-                                selectedLetterSpacing = this.letterSpacings[averageLetterSpacingIndex];
+                                selectedLetterSpacing = this.letterSpacings[0];
                             }
                             this.selectedLetterSpacing = selectedLetterSpacing;
                             _f.label = 6;
@@ -2407,8 +2406,12 @@ define("IFrameNavigator", ["require", "exports", "Cacher", "Manifest", "EventHan
             // Disable text selection as we can’t handle this correctly anyway
             body.style.webkitUserSelect = "none";
             body.style.MozUserSelect = "none";
-            // body.style.msUserSelect = "none";
+            body.style.msUserSelect = "none";
             body.style.userSelect = "none";
+            var headingArray = body.querySelectorAll('h1, h2, h3, h4, h5, h6');
+            for (var i = 0; i < headingArray.length; i++) {
+                headingArray[i].style.letterSpacing = letterSpacing;
+            }
             var fontSizeNumber = parseInt(fontSize.slice(0, -2));
             var sideMargin = fontSizeNumber * 2;
             if (BrowserUtilities.getWidth() > fontSizeNumber * 45) {
@@ -3125,7 +3128,7 @@ define("app", ["require", "exports", "LocalStorageStore", "ServiceWorkerCacher",
                     serif = new SerifFont_1.default();
                     sans = new SansFont_1.default();
                     fontSizes = [12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32];
-                    letterSpacings = [0, 1, 2, 3, 4];
+                    letterSpacings = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
                     day = new DayTheme_1.default();
                     sepia = new SepiaTheme_1.default();
                     night = new NightTheme_1.default();

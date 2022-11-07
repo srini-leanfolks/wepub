@@ -137,18 +137,17 @@ export default class BookSettings {
         }
 
         if (this.letterSpacings.length >= 1) {
-          // First, check if the user has previously set a font size.
+          // First, check if the user has previously set a letter spacing.
           let selectedLetterSpacing = await this.store.get(BookSettings.SELECTED_LETTER_SPACING_KEY);
           let selectedLetterSpacingIsAvailable = (selectedLetterSpacing && this.letterSpacings.indexOf(selectedLetterSpacing) !== -1);
-          // If not, or the user selected a size that's no longer an option, is there a default font size?
+          // If not, or the user selected a size that's no longer an option, is there a default letter spacing?
           if ((!selectedLetterSpacing || !selectedLetterSpacingIsAvailable) && defaultLetterSpacing) {
               selectedLetterSpacing = defaultLetterSpacing;
               selectedLetterSpacingIsAvailable = (selectedLetterSpacing && this.letterSpacings.indexOf(selectedLetterSpacing) !== -1);
           }
-          // If there's no selection and no default, pick a font size in the middle of the options.
+          // If there's no selection and no default, pick a letter spacing in the middle of the options.
           if (!selectedLetterSpacing || !selectedLetterSpacingIsAvailable) {
-              const averageLetterSpacingIndex = Math.floor(this.letterSpacings.length / 2);
-              selectedLetterSpacing = this.letterSpacings[averageLetterSpacingIndex];
+              selectedLetterSpacing = this.letterSpacings[0];
           }
           this.selectedLetterSpacing = selectedLetterSpacing;
       }
